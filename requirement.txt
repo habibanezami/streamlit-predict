@@ -1,0 +1,4 @@
+streamlit
+tabpy-client
+pandas
+scikit-learn
