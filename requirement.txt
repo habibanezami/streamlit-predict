@@ -1,5 +1,5 @@
 streamlit
 future
-tabpy-client
+pickle
 pandas
 scikit-learn
