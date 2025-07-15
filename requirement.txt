@@ -1,5 +1,5 @@
 streamlit
-future
-pickle
+numpy
 pandas
 scikit-learn
+joblib
