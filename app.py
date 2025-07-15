@@ -1,12 +1,11 @@
-
 import streamlit as st
 import numpy as np
-from tabpy_client.client import Client
+import pickle
 
-
-
+# Page settings
 st.set_page_config(page_title="Earthquake Death Predictor", layout="centered")
 
+# Custom Styling (unchanged)
 st.markdown("""
 <style>
 /* App background */
@@ -75,12 +74,10 @@ h1, h2, h3, h4, h5, h6, p, label, div {
 </style>
 """, unsafe_allow_html=True)
 
-
-
-
-
+# UI Header
 st.markdown("Enter earthquake parameters to estimate deaths using ML models.")
 
+# Model selection
 model_options = [
     "Random Forest",
     "Decision Tree",
@@ -90,32 +87,43 @@ model_options = [
 ]
 selected_model = st.sidebar.selectbox("Choose Model", model_options)
 
+# User inputs
 magnitude = st.number_input("Magnitude", min_value=1.0, value=6.5, step=0.5)
 depth = st.number_input("Depth (km)", min_value=0.0, max_value=700.0, value=10.0, step=10.0)
 pop_density = st.number_input("Population Density (people/km²)", min_value=0.0, value=200.0, step=100.0)
 urban_rate = st.number_input("Urbanization Rate (%)", min_value=0.0, max_value=100.0, value=60.0, step=1.0)
 
-try:
-    client = Client("http://localhost:9004/")
-    tabpy_up = True
-except:
-    tabpy_up = False
-    st.error("❌ TabPy server not running at http://localhost:9004")
+# Map UI selection to file names
+model_map = {
+    "Random Forest": "random_forest",
+    "Decision Tree": "decision_tree",
+    "Linear Regression": "linear_regression",
+    "Gradient Boosting": "gradient_boosting",
+    "KNN": "knn"
+}
 
+# Load the corresponding model
+def load_model(model_key):
+    model_file = f"{model_key}.pkl"
+    try:
+        with open(model_file, "rb") as f:
+            return pickle.load(f)
+    except FileNotFoundError:
+        st.error(f"❌ Model file '{model_file}' not found.")
+        return None
+
+# Predict button
 if st.button("Predict"):
-    if not tabpy_up:
-        st.warning("Please start the TabPy server to make predictions.")
-    else:
+    model_key = model_map[selected_model]
+    model = load_model(model_key)
+
+    if model:
         try:
-            result = client.query(
-                "predict_deaths_with_model",
-                [selected_model],
-                [magnitude],
-                [depth],
-                [pop_density],
-                [urban_rate]
+            features = np.array([[magnitude, depth, pop_density, urban_rate]])
+            prediction = model.predict(features)
+            st.markdown(
+                f"<h3 style='color:#dc2626;'>Predicted Deaths: {int(prediction[0]):,}</h3>",
+                unsafe_allow_html=True
             )
-            prediction = int(result["response"][0])
-            st.markdown(f"<h3 style='color:#dc2626;'>Predicted Deaths: {prediction:,}</h3>", unsafe_allow_html=True)
         except Exception as e:
             st.error(f"❌ Prediction failed: {e}")
